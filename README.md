@@ -55,7 +55,7 @@ JDK 1.8.131
 
 ## 三、案例目标
 
-当前研究了网上和大型互联网公司超大文件上传的案例。实现了一种认为是比较优的方案。优化了比较传统的分配上传方式，比较取巧。
+当前研究了网上和大型互联网公司超大文件上传的案例。实现验证了一种认为是比较优的方案。比较传统的分片上传方式更取巧。
 
 解决了一下问题：
 
@@ -81,7 +81,7 @@ MD5秒传
 如果服务端与前端统一修改算法，取段md5，可大大提升验证性能，耗时在20ms左右。
 ```
 
-这里偷懒在加上前端水平欠佳，所以偷取了 https://github.com/DaiYuanchuan/tool-upload 的界面。
+这里偷懒再加上前端水平欠佳，所以偷取了 https://github.com/DaiYuanchuan/tool-upload 的界面。
 
 ![image-20210429023620999](https://raw.githubusercontent.com/lqnasa/springboot-filesystem/master/docs/images/image-20210429023620999.png)
 
@@ -237,13 +237,15 @@ public ResponseEntity<FileUploadStatusVO> checkFileMd5(String md5) throws IOExce
 
 4、**实现分块文件保存，并记录上传块信息**
 
-1、使用java的RandomAccessFile类，该类能随机读写文件。将所有分块信息临时写入以 【文件名_temp】的文件中。可认为是临时文件。
+1、使用java的RandomAccessFile类，该类能随机读写文件。
+
+ 上传文件先写入temp文件中，temp文件格式：【文件名_temp】。可认为是上传的临时文件。
 
 2、每个块写入成功后，会写入大小为Byte.MAX_VALUE的数据写入【文件名.conf】文件中，用于记录上传进度。
 
-一个Byte存在，byte的索引就代表是第几个chunk。byte值127就代表该chunk为上传完成。
+一个Byte写入，则byte的索引就代表是第几个chunk，byte值127就代表该chunk为上传完成。
 
-3、每个块上传完成后，都会检测conf文件中，chunks长度的块是否都填充了Byte.MAX_VALUE。都填充了，说明文件已经上传完成。
+3、每个块上传完成后，都会检索conf文件中chunks长度的块是否都填充了Byte.MAX_VALUE。都填充了，说明文件已经上传完成。
 
 全部上传完成重命名文件为上传的文件名称，即去掉_temp的后缀。
 
@@ -357,29 +359,31 @@ private boolean renameFile(File toBeRenamed, String toFileNewName) {
 
 **Hash：是一个 string 类型的 field（字段） 和 value（值） 的映射表，hash 特别适合用于存储对象。**
 
-**可以看成是一个名称问FILE_UPLOAD_STATUS对象，里面存储的key为文件md5值，value为是否上传成功的值。**
+这里实现可以看成是一个名称为FILE_UPLOAD_STATUS对象，里面存储的key为文件md5值，value为是否上传成功的值。
 
-用户点击上传，时候会先check文件是否已经上传完成。则会通过前端传入的md5值，去redis查询。
+用户点击上传时候，会先check文件是否已经上传完成。则会通过前端传入的md5值，去redis查询。
 
- 匹配key，如果不存在可以。则需要全量上传。
+ 匹配key，如果不存在，则需要全量上传。
 
 匹配key，value为true，则提示用户文件秒传成功。
 
-匹配key，value为false，则需要去查询，那些chunk文件为上传。通知给前端。因此需要知道该文件上传进度的文件conf的路径。才能读取上传进度。
+匹配key，value为false，则需要去查询哪些chunk文件未上传，再通知给前端。
+
+因此需要知道该文件上传进度的文件conf的路径，才能读取上传进度。
 
 ![image-20210429153227431](https://raw.githubusercontent.com/lqnasa/springboot-filesystem/master/docs/images/image-20210429153227431.png)
 
-因此设计以 md5：文件路径匹配的方式存储，则使用Redis 字符串(String)即可。
+设计保存md5与conf文件路径对应。因此使用Redis 字符串(String)即可。
 
-为了方便查询所以会增加查询检测效率，增加以 FILE_MD5:为前缀评接MD5值为Redis String的名称。value为存储上传文件的进度的路径。
+同时方便查询检索效率，增加以 FILE_MD5:为前缀，评接MD5值为Redis String的名称。value为存储上传文件的进度的路径。
 
-这样即可实现通过md5值查找到对应文件上传进度的文件。用于筛选出未上传的chunk数组。传递给前端。前端根据匹配未上传的chunk来续传。
+这样即可实现通过md5值查找到对应文件上传进度的文件。用于筛选出未上传的chunk数组，传递给前端。前端根据匹配未上传的chunks来实现续传。
 
 ![image-20210429153039206](https://raw.githubusercontent.com/lqnasa/springboot-filesystem/master/docs/images/image-20210429153039206.png)
 
-5、为了测试简便，引入了swagger2，用于快速删除数据。
+5、为了方便测试过程清理数据，引入了swagger2，用于快速删除数据。
 
-用于清空redis和上传路径的文件。
+含用于清空redis和上传的文件。
 
 ![image-20210429154319108](https://raw.githubusercontent.com/lqnasa/springboot-filesystem/master/docs/images/image-20210429154319108.png)
 
@@ -389,9 +393,9 @@ private boolean renameFile(File toBeRenamed, String toFileNewName) {
 
 心得：
 
-​       1、对于超大且不易被篡改的文件，要实现断点续传和秒传，可以使用读取部分文件内容+文件大小生成md5值。从而减少js对超大文件读取md5值耗时过长文件。
+​       1、对于超大且不易被篡改的文件，要实现断点续传和秒传，可以使用读取部分文件内容+文件大小生成md5值。从而减少js对超大文件读取md5值耗时过长问题。
 
-​     2、使用一个小文本文件记录文件上传进度是一种非常高效的处理方案，比分块存储后再请求合并方式效率高。
+​     2、使用一个小文本文件记录上传进度是一种非常高效的处理方案，比分块存储后再请求合并方式效率高。
 
 
 
