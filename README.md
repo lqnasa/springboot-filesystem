@@ -83,7 +83,7 @@ MD5秒传
 
 这里偷懒在加上前端水平欠佳，所以偷取了 https://github.com/DaiYuanchuan/tool-upload 的界面。
 
-![image-20210429023620999](D:\spider_workspace\springboot-filesystem\docs\images\image-20210429023620999.png)
+![image-20210429023620999](https://raw.githubusercontent.com/lqnasa/springboot-filesystem/master/docs/images/image-20210429023620999.png)
 
 2、**如何实现断点续传和秒传时读取超大文件的Md5值耗时过长问题。**
 
@@ -172,9 +172,9 @@ function str2ab(str) {
 
 研究阿里云盘实现，从数据观察来看，也是抽样hash值(pre_hash)+size方案（具体实现未知）。所以觉得对于超大文件上传读取整个md5值是不大合理的，因此只能通过抽样生成一个hash值是一个合理的方式。
 
-![image-20210429100052808](D:\spider_workspace\springboot-filesystem\docs\images\image-20210429100052808.png)
+![image-20210429100052808](https://raw.githubusercontent.com/lqnasa/springboot-filesystem/master/docs/images/image-20210429100052808.png)
 
-![image-20210429100112525](D:\spider_workspace\springboot-filesystem\docs\images\image-20210429100112525.png)
+![image-20210429100112525](https://raw.githubusercontent.com/lqnasa/springboot-filesystem/master/docs/images/image-20210429100112525.png)
 
 
 
@@ -367,7 +367,7 @@ private boolean renameFile(File toBeRenamed, String toFileNewName) {
 
 匹配key，value为false，则需要去查询，那些chunk文件为上传。通知给前端。因此需要知道该文件上传进度的文件conf的路径。才能读取上传进度。
 
-![image-20210429153227431](D:\spider_workspace\springboot-filesystem\docs\images\image-20210429153227431.png)
+![image-20210429153227431](https://raw.githubusercontent.com/lqnasa/springboot-filesystem/master/docs/images/image-20210429153227431.png)
 
 因此设计以 md5：文件路径匹配的方式存储，则使用Redis 字符串(String)即可。
 
@@ -375,13 +375,13 @@ private boolean renameFile(File toBeRenamed, String toFileNewName) {
 
 这样即可实现通过md5值查找到对应文件上传进度的文件。用于筛选出未上传的chunk数组。传递给前端。前端根据匹配未上传的chunk来续传。
 
-![image-20210429153039206](D:\spider_workspace\springboot-filesystem\docs\images\image-20210429153039206.png)
+![image-20210429153039206](https://raw.githubusercontent.com/lqnasa/springboot-filesystem/master/docs/images/image-20210429153039206.png)
 
 5、为了测试简便，引入了swagger2，用于快速删除数据。
 
 用于清空redis和上传路径的文件。
 
-![image-20210429154319108](D:\spider_workspace\springboot-filesystem\docs\images\image-20210429154319108.png)
+![image-20210429154319108](https://raw.githubusercontent.com/lqnasa/springboot-filesystem/master/docs/images/image-20210429154319108.png)
 
 
 
